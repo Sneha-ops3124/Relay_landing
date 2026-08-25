@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relay — the agent that never posts without you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0D13;
+    --panel: #12161F;
+    --panel-2: #171C27;
+    --line: #232A38;
+    --text: #E8EBF2;
+    --muted: #8A93A6;
+    --blue: #5B8CFF;
+    --blue-dim: #3A4B7A;
+    --amber: #FFB454;
+    --amber-dim: #6B5730;
+    --green: #4ADE80;
+    --radius: 14px;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior:smooth; background:var(--bg); }
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+
+  ::selection{ background:var(--blue); color:#fff; }
+
+  h1,h2,h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    letter-spacing:-0.02em;
+    line-height:1.08;
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--blue);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .eyebrow::before{
+    content:'';
+    width:7px; height:7px;
+    background:var(--blue);
+    border-radius:2px;
+    display:inline-block;
+    animation: blink 2.4s ease-in-out infinite;
+  }
+
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+  .muted{ color:var(--muted); }
+
+  .container{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 32px;
+  }
+
+  a{ color:inherit; }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:100;
+    background:rgba(10,13,19,0.72);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{
+    max-width:1180px;
+    margin:0 auto;
+    padding:18px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .logo{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:19px;
+    letter-spacing:-0.01em;
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+  .logo-mark{
+    width:16px; height:16px;
+    border-radius:50%;
+    background: conic-gradient(var(--blue), var(--amber), var(--blue));
+  }
+  .nav-cta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    padding:9px 18px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    transition: border-color .2s, background .2s;
+  }
+  .nav-cta:hover{ border-color:var(--blue); background:rgba(91,140,255,.08); }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding-top:120px;
+    padding-bottom:80px;
+    position:relative;
+  }
+
+  .hero-grid{
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap:48px;
+    align-items:center;
+  }
+
+  .hero h1{
+    font-size:clamp(38px, 5vw, 62px);
+    margin:22px 0 24px;
+  }
+
+  .hero h1 em{
+    font-style:normal;
+    color:var(--amber);
+  }
+
+  .hero p.lead{
+    font-size:18px;
+    color:var(--muted);
+    max-width:480px;
+    margin-bottom:36px;
+  }
+
+  .hero-ctas{
+    display:flex;
+    gap:14px;
+    align-items:center;
+  }
+
+  .btn-primary{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    background:var(--blue);
+    color:#0A0D13;
+    font-weight:600;
+    padding:14px 24px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow:0 10px 24px rgba(91,140,255,.25); }
+
+  .btn-ghost{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    color:var(--muted);
+    padding:14px 6px;
+    border-bottom:1px solid var(--line);
+  }
+
+  /* hero baton loop mini animation */
+  .hero-visual{
+    position:relative;
+    aspect-ratio: 1/1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .hero-visual svg{ width:100%; height:100%; overflow:visible; }
+
+  .hero-track{
+    fill:none;
+    stroke: var(--line);
+    stroke-width:2;
+    stroke-dasharray: 3 7;
+  }
+
+  .hero-track-progress{
+    fill:none;
+    stroke: url(#gradTrack);
+    stroke-width:2.5;
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    animation: draw 4.5s ease-in-out infinite;
+  }
+
+  @keyframes draw{
+    0%{ stroke-dashoffset:520; }
+    45%{ stroke-dashoffset:0; }
+    70%{ stroke-dashoffset:0; }
+    100%{ stroke-dashoffset:-520; }
+  }
+
+  .hero-node{ transition: r .2s ease; }
+  .hero-node-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    fill:var(--muted);
+    letter-spacing:.04em;
+  }
+
+  .hero-baton{
+    animation: batonmove 4.5s ease-in-out infinite;
+  }
+  @keyframes batonmove{
+    0%{ offset-distance: 0%; }
+    45%{ offset-distance: 100%; }
+    70%{ offset-distance: 100%; }
+    100%{ offset-distance: 0%; }
+  }
+
+  /* ---------- SECTION HEADERS ---------- */
+  .section-head{
+    max-width:640px;
+    margin: 0 auto 64px;
+    text-align:center;
+  }
+  .section-head h2{ font-size:clamp(28px,3.4vw,40px); margin-top:14px; }
+  .section-head .eyebrow{ justify-content:center; }
+
+  /* ---------- STAGES (sticky track) ---------- */
+  .stages{
+    padding: 120px 0 60px;
+    position:relative;
+  }
+
+  .stages-grid{
+    display:grid;
+    grid-template-columns: 260px 1fr;
+    gap:20px;
+  }
+
+  .track-col{
+    position:sticky;
+    top:110px;
+    height: calc(100vh - 160px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .track-col svg{ width:100%; height:100%; max-height:760px; overflow:visible; }
+
+  .track-line{
+    fill:none;
+    stroke: var(--line);
+    stroke-width:2.5;
+  }
+
+  .track-line-lit{
+    fill:none;
+    stroke: var(--blue);
+    stroke-width:2.5;
+    stroke-dasharray: 1300;
+    stroke-dashoffset: 1300;
+    transition: stroke-dashoffset .1s linear;
+  }
+
+  .stage-node{
+    transition: transform .35s cubic-bezier(.2,.8,.2,1), fill .35s ease;
+    transform-origin:center;
+    transform-box: fill-box;
+  }
+  .stage-node circle.core{ fill:var(--panel-2); stroke:var(--line); stroke-width:2; }
+  .stage-node.active circle.core{ stroke:var(--blue); fill:#152040; }
+  .stage-node.active.gate circle.core{ stroke:var(--amber); fill:#2b2210; }
+  .stage-node.active{ transform: scale(1.18); }
+
+  .stage-node .ring{
+    fill:none; stroke:var(--amber); stroke-width:1.5; opacity:0;
+  }
+  .stage-node.gate.active .ring{
+    opacity:1;
+    animation: pulsering 1.6s ease-out infinite;
+  }
+  @keyframes pulsering{
+    0%{ r:16; opacity:.7; }
+    100%{ r:30; opacity:0; }
+  }
+
+  .baton{
+    opacity:0;
+    transition: opacity .2s ease;
+  }
+  .baton.visible{ opacity:1; }
+  .baton rect{ fill: var(--blue); }
+  .baton.paused rect{ fill: var(--amber); }
+
+  .stage-num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    fill: var(--muted);
+  }
+
+  .stages-content{
+    display:flex;
+    flex-direction:column;
+    gap: 34vh;
+    padding-top:8vh;
+    padding-bottom:20vh;
+  }
+
+  .stage-block{
+    max-width:520px;
+    opacity:.35;
+    transform: translateY(14px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+  .stage-block.in-view{ opacity:1; transform:translateY(0); }
+
+  .stage-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color: var(--blue);
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .stage-block.gate-block .stage-tag{ color:var(--amber); }
+
+  .stage-tag .icon-inline{
+    width:22px; height:22px;
+    border-radius:6px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+  }
+
+  .stage-block h3{ font-size: clamp(22px,2.6vw,30px); margin-bottom:14px; }
+  .stage-block p{ color:var(--muted); font-size:15.5px; max-width:460px; }
+
+  .stage-block .chips{
+    display:flex; gap:8px; flex-wrap:wrap; margin-top:18px;
+  }
+  .stage-block .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    padding:5px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    color:var(--muted);
+  }
+
+  /* ---------- APPROVAL CALLOUT ---------- */
+  .callout{
+    margin: 60px 0;
+    padding: 72px 0;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    background:
+      radial-gradient(600px 300px at 20% 0%, rgba(255,180,84,0.06), transparent 60%);
+  }
+  .callout-inner{
+    max-width:760px;
+    margin:0 auto;
+    text-align:center;
+  }
+  .callout .gate-badge{
+    width:56px; height:56px;
+    border-radius:14px;
+    border:1px solid var(--amber-dim);
+    background:rgba(255,180,84,.08);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 26px;
+    font-size:22px;
+  }
+  .callout h2{ font-size:clamp(26px,3.4vw,36px); margin-bottom:18px; }
+  .callout p{ color:var(--muted); font-size:16.5px; max-width:560px; margin:0 auto; }
+  .callout .quote-mark{ color:var(--amber); font-family:'Space Grotesk',sans-serif; }
+
+  /* ---------- TECH STACK ---------- */
+  .tech{ padding:120px 0; }
+  .tech-rail{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:14px;
+    max-width:820px;
+    margin:0 auto;
+  }
+  .tech-chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:14px 20px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--panel);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:var(--text);
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .tech-chip:hover{ border-color:var(--blue); transform:translateY(-2px); }
+  .tech-chip .dot{
+    width:6px; height:6px; border-radius:50%; background:var(--blue);
+  }
+  .tech-chip:nth-child(2) .dot{ background:var(--amber); }
+  .tech-chip:nth-child(5) .dot{ background:var(--green); }
+
+  /* ---------- FOOTER / CTA ---------- */
+  .final-cta{
+    padding: 140px 0 100px;
+    text-align:center;
+  }
+  .final-cta h2{
+    font-size:clamp(32px,5vw,54px);
+    max-width:760px;
+    margin: 20px auto 30px;
+  }
+  .final-cta .btn-primary{ padding:16px 30px; font-size:15px; }
+
+  .waitlist-form{
+    max-width:440px;
+    margin: 40px auto 0;
+    display:flex;
+    gap:10px;
+  }
+  .waitlist-form input{
+    flex:1;
+    font-family:'Inter', sans-serif;
+    font-size:15px;
+    padding:14px 16px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--text);
+    outline:none;
+    transition: border-color .2s ease;
+  }
+  .waitlist-form input::placeholder{ color:var(--muted); }
+  .waitlist-form input:focus{ border-color:var(--blue); }
+  .waitlist-form .btn-primary{ white-space:nowrap; }
+  .waitlist-form .btn-primary:disabled{ opacity:.6; cursor:default; transform:none; box-shadow:none; }
+
+  .waitlist-status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    margin-top:14px;
+    min-height:18px;
+  }
+  .waitlist-status.ok{ color:var(--green); }
+  .waitlist-status.err{ color:#FF8080; }
+  .waitlist-status.pending{ color:var(--muted); }
+
+  @media (max-width:560px){
+    .waitlist-form{ flex-direction:column; }
+  }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding: 32px 0;
+  }
+  .footer-inner{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 900px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .hero-visual{ max-width:340px; margin:0 auto; order:-1; }
+    .stages-grid{ grid-template-columns: 1fr; }
+    .track-col{ display:none; }
+    .stage-tag .icon-inline{ display:inline-flex; }
+    .stages-content{ gap:64px; padding-top:0; }
+    .stage-block{ opacity:1; transform:none; }
+  }
+
+  @media (max-width: 560px){
+    .container{ padding:0 20px; }
+    .nav-inner{ padding:16px 20px; }
+    .hero{ padding-top:100px; }
+    .hero-ctas{ flex-wrap:wrap; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo"><span class="logo-mark"></span>RELAY</div>
+    <a href="#cta" class="nav-cta">Start the relay →</a>
+  </div>
+</nav>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="eyebrow">AI SOCIAL AGENT · HUMAN-GATED</div>
+      <h1>Your content never<br>runs <em>alone</em>.</h1>
+      <p class="lead">Relay drafts your social posts, hands them to you at the checkpoint, then carries every approved post to schedule and publish — across every platform you connect. Nothing goes out without your sign-off.</p>
+      <div class="hero-ctas">
+        <a href="#cta" class="btn-primary">Start the relay →</a>
+        <a href="#stages" class="btn-ghost">See how a post travels</a>
+      </div>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      <svg viewBox="0 0 300 300">
+        <defs>
+          <linearGradient id="gradTrack" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5B8CFF"/>
+            <stop offset="55%" stop-color="#FFB454"/>
+            <stop offset="100%" stop-color="#5B8CFF"/>
+          </linearGradient>
+        </defs>
+        <path id="heroPath" class="hero-track" d="M150,30 A120,120 0 1,1 149,30" />
+        <path class="hero-track-progress" d="M150,30 A120,120 0 1,1 149,30" />
+
+        <g>
+          <circle class="hero-node" cx="150" cy="30" r="5" fill="#5B8CFF"/>
+          <text class="hero-node-label" x="164" y="34">generate</text>
+        </g>
+        <g>
+          <circle class="hero-node" cx="270" cy="150" r="5" fill="#FFB454"/>
+          <text class="hero-node-label" x="240" y="132" text-anchor="end">review</text>
+        </g>
+        <g>
+          <circle class="hero-node" cx="150" cy="270" r="5" fill="#5B8CFF"/>
+          <text class="hero-node-label" x="164" y="288">schedule</text>
+        </g>
+        <g>
+          <circle class="hero-node" cx="30" cy="150" r="5" fill="#5B8CFF"/>
+          <text class="hero-node-label" x="42" y="132">publish</text>
+        </g>
+
+        <rect class="hero-baton" width="14" height="7" rx="2" style="offset-path: path('M150,30 A120,120 0 1,1 149,30'); fill:#0A0D13; stroke:#5B8CFF; stroke-width:2;"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- ================= STAGES ================= -->
+<section class="stages" id="stages">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">HOW A POST TRAVELS</div>
+      <h2>Four legs. One handoff that matters.</h2>
+    </div>
+
+    <div class="stages-grid">
+
+      <!-- sticky diagram -->
+      <div class="track-col">
+        <svg viewBox="0 0 240 900" id="trackSvg">
+          <path class="track-line" d="M120,40 L120,110 L120,180 L150,220 L120,260 L120,330 L120,420 L90,460 L120,500 L120,570 L120,660 L150,700 L120,740 L120,810 L120,860" />
+          <path class="track-line-lit" id="trackLit" d="M120,40 L120,110 L120,180 L150,220 L120,260 L120,330 L120,420 L90,460 L120,500 L120,570 L120,660 L150,700 L120,740 L120,810 L120,860" />
+
+          <!-- node 1: generate -->
+          <g class="stage-node" data-node="0">
+            <circle class="core" cx="120" cy="110" r="13"/>
+            <text class="stage-num" x="140" y="100">01</text>
+          </g>
+          <!-- node 2: human review (gate) -->
+          <g class="stage-node gate" data-node="1">
+            <circle class="ring" cx="120" cy="330" r="16"/>
+            <circle class="core" cx="120" cy="330" r="13"/>
+            <text class="stage-num" x="140" y="320">02</text>
+          </g>
+          <!-- node 3: schedule -->
+          <g class="stage-node" data-node="2">
+            <circle class="core" cx="120" cy="570" r="13"/>
+            <text class="stage-num" x="140" y="560">03</text>
+          </g>
+          <!-- node 4: publish -->
+          <g class="stage-node" data-node="3">
+            <circle class="core" cx="120" cy="810" r="13"/>
+            <text class="stage-num" x="140" y="800">04</text>
+          </g>
+
+          <g class="baton" id="baton">
+            <rect x="-9" y="-4" width="18" height="8" rx="3"/>
+          </g>
+        </svg>
+      </div>
+
+      <!-- scroll copy -->
+      <div class="stages-content">
+
+        <div class="stage-block" data-idx="0">
+          <div class="stage-tag"><span class="icon-inline">✎</span>Leg 01 — Draft</div>
+          <h3>Relay writes the first draft.</h3>
+          <p>Fed by your brand voice and recent performance, Relay generates on-brand posts for each platform — copy, hashtags, and image direction — ready for a human to look at, not to publish.</p>
+          <div class="chips"><span class="chip">Tool Calling</span><span class="chip">APIs</span></div>
+        </div>
+
+        <div class="stage-block gate-block" data-idx="1">
+          <div class="stage-tag"><span class="icon-inline">✋</span>Leg 02 — The handoff</div>
+          <h3>It waits for you. Every time.</h3>
+          <p>This is the checkpoint Relay can't skip. Every draft sits in your queue until you approve, edit, or reject it — no post moves past this gate on its own.</p>
+          <div class="chips"><span class="chip">Human Approval</span><span class="chip">LangGraph</span></div>
+        </div>
+
+        <div class="stage-block" data-idx="2">
+          <div class="stage-tag"><span class="icon-inline">◷</span>Leg 03 — Set the pace</div>
+          <h3>Approved posts find their slot.</h3>
+          <p>Once you sign off, Relay schedules the post for the right time on the right calendar — spacing content, avoiding collisions, respecting cadence you set.</p>
+          <div class="chips"><span class="chip">Cron</span><span class="chip">Automation</span></div>
+        </div>
+
+        <div class="stage-block" data-idx="3">
+          <div class="stage-tag"><span class="icon-inline">➜</span>Leg 04 — Cross the line</div>
+          <h3>Carried to every platform you connect.</h3>
+          <p>At the scheduled moment, Relay publishes through each platform's own API via OAuth — and logs the result back to you, leg complete.</p>
+          <div class="chips"><span class="chip">OAuth</span><span class="chip">External Platforms</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= APPROVAL CALLOUT ================= -->
+<section class="callout">
+  <div class="container callout-inner">
+    <div class="gate-badge">✋</div>
+    <h2><span class="quote-mark">“</span>Automate the work. Never automate the yes.<span class="quote-mark">”</span></h2>
+    <p>Relay is built around one rule that never bends: nothing reaches a real audience until a real person says so. The agent does the running — you hold the baton at the only leg that counts.</p>
+  </div>
+</section>
+
+<!-- ================= TECH ================= -->
+<section class="tech">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">BUILT ON THE TRACK</div>
+      <h2>The stack under the relay.</h2>
+    </div>
+    <div class="tech-rail">
+      <div class="tech-chip"><span class="dot"></span>LangGraph</div>
+      <div class="tech-chip"><span class="dot"></span>OAuth</div>
+      <div class="tech-chip"><span class="dot"></span>External APIs</div>
+      <div class="tech-chip"><span class="dot"></span>Cron Scheduling</div>
+      <div class="tech-chip"><span class="dot"></span>Workflow Automation</div>
+      <div class="tech-chip"><span class="dot"></span>Tool Calling</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section class="final-cta" id="cta">
+  <div class="container">
+    <div class="eyebrow" style="justify-content:center;">READY WHEN YOU ARE</div>
+    <h2>Let Relay run the legs.<br>You keep the baton at the gate.</h2>
+
+    <form class="waitlist-form" id="waitlistForm">
+      <input type="email" id="waitlistEmail" placeholder="you@company.com" required autocomplete="email">
+      <button type="submit" class="btn-primary" id="waitlistBtn">Start the relay →</button>
+    </form>
+    <div class="waitlist-status" id="waitlistStatus"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-inner">
+    <span>RELAY — AI SOCIAL MEDIA AGENT</span>
+    <span>DRAFT · REVIEW · SCHEDULE · PUBLISH</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- fade-in stage blocks ----
+  var blocks = document.querySelectorAll('.stage-block');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){ e.target.classList.add('in-view'); }
+    });
+  }, { threshold: 0.35 });
+  blocks.forEach(function(b){ io.observe(b); });
+
+  // ---- sticky track: baton + lit path + node activation ----
+  var trackCol = document.querySelector('.track-col');
+  var stagesSection = document.getElementById('stages');
+  var litPath = document.getElementById('trackLit');
+  var basePath = document.querySelector('.track-line');
+  var baton = document.getElementById('baton');
+  var nodes = document.querySelectorAll('.stage-node');
+
+  if(trackCol && basePath && litPath && baton && stagesSection){
+    var pathLen = basePath.getTotalLength();
+    litPath.style.strokeDasharray = pathLen;
+    litPath.style.strokeDashoffset = pathLen;
+
+    var contentWrap = document.querySelector('.stages-content');
+
+    function update(){
+      var rect = contentWrap.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var total = rect.height - vh * 0.3;
+      var scrolled = -rect.top + vh * 0.15;
+      var progress = total > 0 ? scrolled / total : 0;
+      progress = Math.max(0, Math.min(1, progress));
+
+      var offset = pathLen - (pathLen * progress);
+      litPath.style.strokeDashoffset = offset;
+
+      var pt = basePath.getPointAtLength(pathLen * progress);
+      baton.setAttribute('transform', 'translate(' + pt.x + ',' + pt.y + ')');
+      baton.classList.add('visible');
+
+      // node activation thresholds roughly matching node y-positions along path
+      var thresholds = [0.10, 0.36, 0.63, 0.90];
+      nodes.forEach(function(n, i){
+        if(progress >= thresholds[i] - 0.03){
+          n.classList.add('active');
+        } else {
+          n.classList.remove('active');
+        }
+      });
+
+      // baton pauses/glows amber near the human gate (node index 1)
+      if(progress > thresholds[1]-0.04 && progress < thresholds[1]+0.06){
+        baton.classList.add('paused');
+      } else {
+        baton.classList.remove('paused');
+      }
+    }
+
+    var ticking = false;
+    function onScroll(){
+      if(!ticking){
+        requestAnimationFrame(function(){ update(); ticking = false; });
+        ticking = true;
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive:true });
+    window.addEventListener('resize', onScroll);
+    update();
+  }
+})();
+</script>
+
+<!-- ===== Supabase backend =====
+  1. Create a project at https://supabase.com
+  2. In the SQL editor, run:
+
+     create table waitlist (
+       id uuid primary key default gen_random_uuid(),
+       email text not null unique,
+       created_at timestamptz default now()
+     );
+
+     alter table waitlist enable row level security;
+
+     create policy "anyone can join the waitlist"
+       on waitlist for insert
+       to anon
+       with check (true);
+
+  3. Paste your Project URL and anon public key below (Project Settings → API).
+     The anon key is safe to expose in client-side code — RLS is what protects the table.
+-->
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+  const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';       // e.g. https://xxxxx.supabase.co
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+  const form = document.getElementById('waitlistForm');
+  const emailInput = document.getElementById('waitlistEmail');
+  const btn = document.getElementById('waitlistBtn');
+  const status = document.getElementById('waitlistStatus');
+
+  const configured = SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20;
+  const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const email = emailInput.value.trim();
+    if(!email) return;
+
+    if(!configured){
+      status.textContent = 'Backend not connected yet — add your Supabase URL and key in relay.html.';
+      status.className = 'waitlist-status err';
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = 'Joining…';
+    status.className = 'waitlist-status pending';
+
+    const { error } = await supabase.from('waitlist').insert({ email: email });
+
+    btn.disabled = false;
+
+    if(error){
+      if(error.code === '23505'){
+        status.textContent = 'You\'re already on the list — hang tight.';
+        status.className = 'waitlist-status ok';
+      } else {
+        status.textContent = 'Something went wrong. Please try again.';
+        status.className = 'waitlist-status err';
+      }
+      return;
+    }
+
+    status.textContent = 'You\'re in. We\'ll be in touch.';
+    status.className = 'waitlist-status ok';
+    form.reset();
+  });
+</script>
+
+</body>
+</html>
