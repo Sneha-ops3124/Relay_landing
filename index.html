@@ -477,6 +477,117 @@
     .waitlist-form{ flex-direction:column; }
   }
 
+  /* ---------- DASHBOARD / AUTH ---------- */
+  .dashboard-section{ padding:110px 0; border-top:1px solid var(--line); }
+
+  .auth-box{
+    max-width:400px;
+    margin:0 auto;
+    text-align:center;
+  }
+  .auth-box p{ color:var(--muted); font-size:14.5px; margin-bottom:22px; }
+  .auth-form{ display:flex; gap:10px; }
+  .auth-form input{
+    flex:1;
+    font-family:'Inter', sans-serif;
+    font-size:15px;
+    padding:13px 15px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--text);
+    outline:none;
+  }
+  .auth-form input:focus{ border-color:var(--blue); }
+  .btn-secondary{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    background:transparent;
+    color:var(--text);
+    border:1px solid var(--line);
+    padding:13px 18px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:border-color .2s ease;
+  }
+  .btn-secondary:hover{ border-color:var(--blue); }
+
+  .dash-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    max-width:820px;
+    margin:0 auto 34px;
+  }
+  .dash-header .who{ font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--muted); }
+
+  .queue{ max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:14px; }
+
+  .post-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:20px;
+  }
+  .post-card .post-body{ flex:1; }
+  .post-card .post-meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:8px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .post-card p{ font-size:14.5px; color:var(--text); }
+  .status-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    padding:3px 8px;
+    border-radius:5px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .status-pending_review{ background:rgba(255,180,84,.12); color:var(--amber); }
+  .status-approved{ background:rgba(74,222,128,.12); color:var(--green); }
+  .status-rejected{ background:rgba(255,128,128,.12); color:#FF8080; }
+  .status-scheduled{ background:rgba(91,140,255,.12); color:var(--blue); }
+
+  .post-actions{ display:flex; gap:8px; flex-shrink:0; }
+  .post-actions button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:8px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--text);
+  }
+  .post-actions .approve:hover{ border-color:var(--green); color:var(--green); }
+  .post-actions .reject:hover{ border-color:#FF8080; color:#FF8080; }
+
+  .empty-queue{
+    text-align:center;
+    color:var(--muted);
+    font-size:14.5px;
+    padding:40px 0;
+  }
+  .empty-queue button{ margin-top:16px; }
+
+  @media (max-width:560px){
+    .auth-form{ flex-direction:column; }
+    .post-card{ flex-direction:column; }
+    .post-actions{ width:100%; }
+    .post-actions button{ flex:1; }
+  }
+
   footer{
     border-top:1px solid var(--line);
     padding: 32px 0;
@@ -518,7 +629,7 @@
 <nav>
   <div class="nav-inner">
     <div class="logo"><span class="logo-mark"></span>RELAY</div>
-    <a href="#cta" class="nav-cta">Start the relay →</a>
+    <a href="#review" class="nav-cta">Review queue →</a>
   </div>
 </nav>
 
@@ -659,6 +770,35 @@
   </div>
 </section>
 
+<!-- ================= REVIEW QUEUE (DASHBOARD) ================= -->
+<section class="dashboard-section" id="review">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">LEG 02, LIVE</div>
+      <h2>Your review queue.</h2>
+    </div>
+
+    <!-- signed out -->
+    <div class="auth-box" id="authBox">
+      <p>Sign in with a magic link to see drafts waiting on your approval.</p>
+      <form class="auth-form" id="authForm">
+        <input type="email" id="authEmail" placeholder="you@company.com" required autocomplete="email">
+        <button type="submit" class="btn-secondary" id="authBtn">Send link</button>
+      </form>
+      <div class="waitlist-status" id="authStatus"></div>
+    </div>
+
+    <!-- signed in -->
+    <div id="dashboardPanel" style="display:none;">
+      <div class="dash-header">
+        <span class="who" id="whoLabel"></span>
+        <button class="btn-secondary" id="signOutBtn">Sign out</button>
+      </div>
+      <div class="queue" id="queueList"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ================= TECH ================= -->
 <section class="tech">
   <div class="container">
@@ -774,73 +914,219 @@
 </script>
 
 <!-- ===== Supabase backend =====
-  1. Create a project at https://supabase.com
-  2. In the SQL editor, run:
 
+  1. Create a project at https://supabase.com
+
+  2. In the SQL editor, run this full block (waitlist + posts + platforms + RLS):
+
+     -- waitlist --
      create table waitlist (
        id uuid primary key default gen_random_uuid(),
        email text not null unique,
        created_at timestamptz default now()
      );
-
      alter table waitlist enable row level security;
-
      create policy "anyone can join the waitlist"
-       on waitlist for insert
-       to anon
-       with check (true);
+       on waitlist for insert to anon with check (true);
 
-  3. Paste your Project URL and anon public key below (Project Settings → API).
-     The anon key is safe to expose in client-side code — RLS is what protects the table.
+     -- platforms a user has connected (Twitter, LinkedIn, etc.) --
+     create table platforms (
+       id uuid primary key default gen_random_uuid(),
+       user_id uuid references auth.users(id) on delete cascade,
+       name text not null,
+       connected boolean default false,
+       connected_at timestamptz
+     );
+
+     -- drafts generated by the agent, waiting on / past human review --
+     create table posts (
+       id uuid primary key default gen_random_uuid(),
+       user_id uuid references auth.users(id) on delete cascade,
+       platform text not null,
+       content text not null,
+       status text not null default 'pending_review',
+         -- pending_review | approved | rejected | scheduled | published
+       scheduled_for timestamptz,
+       reviewed_at timestamptz,
+       created_at timestamptz default now()
+     );
+
+     alter table platforms enable row level security;
+     alter table posts enable row level security;
+
+     create policy "users manage their own platforms"
+       on platforms for all
+       using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+     create policy "users manage their own posts"
+       on posts for all
+       using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+  3. In Authentication → URL Configuration, add your Vercel URL
+     (both the preview and production domains) to "Redirect URLs",
+     or magic-link sign-in will bounce back to the wrong place.
+
+  4. Paste your Project URL and anon public key below (Project Settings → API).
+     The anon key is safe to expose in client-side code — RLS is what protects the tables.
 -->
 <script type="module">
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-  const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';       // e.g. https://xxxxx.supabase.co
-  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-
-  const form = document.getElementById('waitlistForm');
-  const emailInput = document.getElementById('waitlistEmail');
-  const btn = document.getElementById('waitlistBtn');
-  const status = document.getElementById('waitlistStatus');
+  const SUPABASE_URL = 'https://ujywsoorzxmcifqftahq.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqeXdzb29yenhtY2lmcWZ0YWhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2MzYzMzEsImV4cCI6MjEwMzIxMjMzMX0.QE84KIfcmFNMhGOPvyeZBexn1mqw-F-wPZFCTU7vRNI';
 
   const configured = SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length > 20;
   const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-  form.addEventListener('submit', async function(e){
+  /* ---------- waitlist form (unchanged) ---------- */
+  const wForm = document.getElementById('waitlistForm');
+  const wEmail = document.getElementById('waitlistEmail');
+  const wBtn = document.getElementById('waitlistBtn');
+  const wStatus = document.getElementById('waitlistStatus');
+
+  wForm.addEventListener('submit', async function(e){
     e.preventDefault();
-    const email = emailInput.value.trim();
+    const email = wEmail.value.trim();
     if(!email) return;
 
     if(!configured){
-      status.textContent = 'Backend not connected yet — add your Supabase URL and key in relay.html.';
-      status.className = 'waitlist-status err';
+      wStatus.textContent = 'Backend not connected yet — add your Supabase URL and key in index.html.';
+      wStatus.className = 'waitlist-status err';
       return;
     }
 
-    btn.disabled = true;
-    status.textContent = 'Joining…';
-    status.className = 'waitlist-status pending';
+    wBtn.disabled = true;
+    wStatus.textContent = 'Joining…';
+    wStatus.className = 'waitlist-status pending';
 
     const { error } = await supabase.from('waitlist').insert({ email: email });
-
-    btn.disabled = false;
+    wBtn.disabled = false;
 
     if(error){
       if(error.code === '23505'){
-        status.textContent = 'You\'re already on the list — hang tight.';
-        status.className = 'waitlist-status ok';
+        wStatus.textContent = 'You\'re already on the list — hang tight.';
+        wStatus.className = 'waitlist-status ok';
       } else {
-        status.textContent = 'Something went wrong. Please try again.';
-        status.className = 'waitlist-status err';
+        wStatus.textContent = 'Something went wrong. Please try again.';
+        wStatus.className = 'waitlist-status err';
       }
       return;
     }
 
-    status.textContent = 'You\'re in. We\'ll be in touch.';
-    status.className = 'waitlist-status ok';
-    form.reset();
+    wStatus.textContent = 'You\'re in. We\'ll be in touch.';
+    wStatus.className = 'waitlist-status ok';
+    wForm.reset();
   });
+
+  /* ---------- auth (magic link) + review queue ---------- */
+  const authBox = document.getElementById('authBox');
+  const authForm = document.getElementById('authForm');
+  const authEmail = document.getElementById('authEmail');
+  const authBtn = document.getElementById('authBtn');
+  const authStatus = document.getElementById('authStatus');
+  const dashboardPanel = document.getElementById('dashboardPanel');
+  const whoLabel = document.getElementById('whoLabel');
+  const signOutBtn = document.getElementById('signOutBtn');
+  const queueList = document.getElementById('queueList');
+
+  if(!configured){
+    authStatus.textContent = 'Backend not connected yet — add your Supabase URL and key in index.html.';
+    authStatus.className = 'waitlist-status err';
+  }
+
+  authForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!configured) return;
+    const email = authEmail.value.trim();
+    if(!email) return;
+
+    authBtn.disabled = true;
+    authStatus.textContent = 'Sending magic link…';
+    authStatus.className = 'waitlist-status pending';
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: { emailRedirectTo: window.location.href }
+    });
+
+    authBtn.disabled = false;
+
+    if(error){
+      authStatus.textContent = 'Something went wrong. Please try again.';
+      authStatus.className = 'waitlist-status err';
+      return;
+    }
+    authStatus.textContent = 'Check your inbox for the sign-in link.';
+    authStatus.className = 'waitlist-status ok';
+  });
+
+  signOutBtn.addEventListener('click', async function(){
+    if(!configured) return;
+    await supabase.auth.signOut();
+  });
+
+  function renderPosts(posts){
+    if(!posts || posts.length === 0){
+      queueList.innerHTML = '<div class="empty-queue">No drafts yet.<br><button class="btn-secondary" id="seedBtn">Generate sample drafts</button></div>';
+      document.getElementById('seedBtn').addEventListener('click', seedSampleDrafts);
+      return;
+    }
+    queueList.innerHTML = posts.map(function(p){
+      return '<div class="post-card" data-id="' + p.id + '">' +
+        '<div class="post-body">' +
+          '<div class="post-meta"><span>' + p.platform + '</span><span class="status-badge status-' + p.status + '">' + p.status.replace('_',' ') + '</span></div>' +
+          '<p>' + p.content.replace(/</g,'&lt;') + '</p>' +
+        '</div>' +
+        (p.status === 'pending_review'
+          ? '<div class="post-actions"><button class="approve" data-action="approved">Approve</button><button class="reject" data-action="rejected">Reject</button></div>'
+          : '') +
+      '</div>';
+    }).join('');
+
+    queueList.querySelectorAll('button[data-action]').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const card = btn.closest('.post-card');
+        const id = card.getAttribute('data-id');
+        const action = btn.getAttribute('data-action');
+        await supabase.from('posts').update({ status: action, reviewed_at: new Date().toISOString() }).eq('id', id);
+        loadPosts();
+      });
+    });
+  }
+
+  async function seedSampleDrafts(){
+    const { data: { user } } = await supabase.auth.getUser();
+    if(!user) return;
+    const samples = [
+      { user_id: user.id, platform: 'linkedin', content: 'Relay just shipped its first automated draft — reviewed and approved by a human before it ever went live. That\'s the whole point.', status: 'pending_review' },
+      { user_id: user.id, platform: 'twitter', content: 'Automating the busywork of social, not the judgment call. Draft → review → schedule → publish.', status: 'pending_review' },
+      { user_id: user.id, platform: 'instagram', content: 'Behind every scheduled post is a person who said yes first.', status: 'pending_review' }
+    ];
+    await supabase.from('posts').insert(samples);
+    loadPosts();
+  }
+
+  async function loadPosts(){
+    const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+    if(!error){ renderPosts(data); }
+  }
+
+  async function updateAuthUI(session){
+    if(session && session.user){
+      authBox.style.display = 'none';
+      dashboardPanel.style.display = 'block';
+      whoLabel.textContent = 'Signed in as ' + session.user.email;
+      loadPosts();
+    } else {
+      authBox.style.display = 'block';
+      dashboardPanel.style.display = 'none';
+    }
+  }
+
+  if(configured){
+    supabase.auth.getSession().then(function(res){ updateAuthUI(res.data.session); });
+    supabase.auth.onAuthStateChange(function(event, session){ updateAuthUI(session); });
+  }
 </script>
 
 </body>
